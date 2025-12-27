@@ -1,0 +1,49 @@
+version: "3.9"
+
+services:
+  #################################################
+  # MySQL database
+  #################################################
+  db:
+    image: mysql:8.0
+    container_name: salessavvy-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: "System" # quotes needed for '@' or special chars
+      MYSQL_DATABASE: sales_savvy
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -pSystem --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  #################################################
+  # Spring-Boot application
+  #################################################
+  app:
+    build: .
+    container_name: salessavvyBackend
+    ports:
+      - "9090:9090"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/sales_savvy
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: "System"
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      JWT_SECRET: your-very-long-secure-secret-key-for-production-12345678901234567890
+      JWT_EXPIRATION: "3600000"
+      RAZORPAY_KEY_ID: rzp_test_RIjNJjPF8tMPzC
+      RAZORPAY_KEY_SECRET: kTx5zkMkmOK5b6wsrDWDdYNt
+    volumes:
+      - ./src/main/resources/application.properties:/app/config/application.properties
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
